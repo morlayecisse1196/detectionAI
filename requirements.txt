@@ -1,0 +1,8 @@
+streamlit>=1.30.0
+ultralytics>=8.0.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# OpenCV (optionnel, pour le traitement vidéo uniquement)
+# Décommentez la ligne suivante si vous voulez traiter des vidéos
+# opencv-python-headless>=4.8.0
