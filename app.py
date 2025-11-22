@@ -44,7 +44,7 @@ h1, h2, h3, h4 {
 """, unsafe_allow_html=True)
 
 # ============================================
-#     LOAD YOLO OR FAIL GRACEFULLY
+#     LOAD YOLO OR FAIL
 # ============================================
 try:
     from ultralytics import YOLO
