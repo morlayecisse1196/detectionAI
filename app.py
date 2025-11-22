@@ -53,7 +53,7 @@ except ImportError:
     st.error("La librairie 'ultralytics' est requise : `pip install ultralytics`")
     ULTRALYTICS_AVAILABLE = False
 
-MODEL_LOCAL = Path("./principale/best.pt")
+MODEL_LOCAL = Path("best.pt")
 
 if "model" not in st.session_state:
     st.session_state.model = None
