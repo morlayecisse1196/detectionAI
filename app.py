@@ -230,38 +230,6 @@ def read_file_bytes(path):
         return None
 
 
-def safe_rerun():
-    """Tentative robuste de relancer l'app Streamlit.
-
-    Essaie `st.experimental_rerun()`, sinon essaie d'élever l'exception
-    interne `RerunException`. En dernier recours, définit un flag dans
-    `st.session_state` et appelle `st.stop()` pour arrêter proprement.
-    """
-    try:
-        if hasattr(st, "experimental_rerun"):
-            return st.experimental_rerun()
-    except Exception:
-        pass
-
-    # Essayer d'importer et lever RerunException selon différentes versions
-    try:
-        # Anciennes versions
-        from streamlit.script_runner import RerunException
-        raise RerunException()
-    except Exception:
-        try:
-            # Nouvelles versions
-            from streamlit.runtime.scriptrunner import RerunException
-            raise RerunException()
-        except Exception:
-            # Dernier recours
-            st.session_state._rerun_needed = True
-            try:
-                st.stop()
-            except Exception:
-                return
-
-
 # ============================================
 #          INTERFACE STREAMLIT
 # ============================================
@@ -601,35 +569,7 @@ def main():
                 else:
                     st.warning("Aucun résultat. Réessayez avec une autre photo.")
             
-            st.markdown("---")
-            st.info("""
-            💡 **Astuce** : Pour une détection en continu, prenez plusieurs photos successives !
-            
-            Pour un vrai streaming webcam, utilisez ce script Python local :
-            ```python
-            import cv2
-            from ultralytics import YOLO
-
-            model = YOLO('best.pt')
-            cap = cv2.VideoCapture(0)
-
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                
-                results = model.predict(frame, conf=0.25)
-                annotated = results[0].plot()
-                
-                cv2.imshow('Detection', annotated)
-                
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-
-            cap.release()
-            cv2.destroyAllWindows()
-            ```
-            """)
+            # Bloc d'astuce et script de streaming webcam supprimé par demande de l'utilisateur
 
 
 if __name__ == "__main__":
