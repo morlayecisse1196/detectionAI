@@ -17,29 +17,51 @@ st.set_page_config(
     layout="centered",
 )
 
-# ---- CSS custom (fond blanc + style moderne)
+# ---- CSS: Bleu foncé professionnel avec gradient discret
 st.markdown("""
 <style>
+/* Thème bleu foncé professionnel */
 body {
-    background-color: white;
-    color: #222;
-    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(180deg, #071329 0%, #081b2e 60%); /* gradient sombre */
+    color: #E6F0F6; /* texte clair */
+    font-family: 'Segoe UI', Tahoma, sans-serif;
 }
-h1, h2, h3, h4 {
-    color: #0A3D62;
+h1, h2, h3, h4, h5 {
+    color: #BFD8F2; /* légère nuance bleue pour les titres */
+    margin: 0.2rem 0 0.6rem 0;
 }
-.sidebar .sidebar-content {
-    background-color: #F5F6FA;
+.stSidebar {
+    background: linear-gradient(180deg, #051222 0%, #072035 100%);
 }
 .stButton > button {
-    background-color: #0984E3;
-    color: white;
-    padding: 8px 18px;
-    border-radius: 6px;
+    background: linear-gradient(90deg, #0b5fa8, #083f7a); /* bouton bleu */
+    color: #FFFFFF;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.06);
 }
 .stButton > button:hover {
-    background-color: #74B9FF;
+    filter: brightness(1.05);
 }
+.stDownloadButton > button { 
+    background: linear-gradient(90deg, #0b5fa8, #083f7a);
+    color: #fff;
+}
+img { 
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+.stProgress > div > div { 
+    background: linear-gradient(90deg, #0b5fa8, #06a0ff);
+}
+/* Inputs and containers subtle border */
+[data-testid="stBlock"] > div, [data-testid="stHorizontalBlock"] > div {
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.03);
+}
+/* Sidebar text color */
+[data-testid="stSidebar"] * { color: #DCEFFB !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -228,6 +250,50 @@ def read_file_bytes(path):
             return f.read()
     except Exception:
         return None
+
+
+def safe_rerun():
+    """Relance l'application Streamlit de façon compatible avec plusieurs versions.
+
+    Comportement :
+    - Si `st.rerun()` existe, l'utilise.
+    - Sinon essaie `st.experimental_rerun()`.
+    - Sinon tente de lever `RerunException` depuis les chemins internes connus.
+    - En dernier recours, marque un flag dans `st.session_state` puis appelle `st.stop()`.
+    """
+    # 1) API moderne (Streamlit >= x)
+    try:
+        if hasattr(st, "rerun"):
+            return st.rerun()
+    except Exception:
+        pass
+
+    # 2) API expérimentale plus ancienne
+    try:
+        if hasattr(st, "experimental_rerun"):
+            return st.experimental_rerun()
+    except Exception:
+        pass
+
+    # 3) Lever l'exception interne RerunException (emplacements selon versions)
+    for modpath in ("streamlit.script_runner", "streamlit.runtime.scriptrunner"):
+        try:
+            mod = __import__(modpath, fromlist=["RerunException"])
+            RerunException = getattr(mod, "RerunException", None)
+            if RerunException:
+                raise RerunException()
+        except Exception:
+            pass
+
+    # 4) Dernier recours : marquer et stopper
+    try:
+        st.session_state["_rerun_needed"] = True
+    except Exception:
+        pass
+    try:
+        st.stop()
+    except Exception:
+        return
 
 
 # ============================================
