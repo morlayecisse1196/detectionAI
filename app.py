@@ -230,6 +230,38 @@ def read_file_bytes(path):
         return None
 
 
+def safe_rerun():
+    """Tentative robuste de relancer l'app Streamlit.
+
+    Essaie `st.experimental_rerun()`, sinon essaie d'élever l'exception
+    interne `RerunException`. En dernier recours, définit un flag dans
+    `st.session_state` et appelle `st.stop()` pour arrêter proprement.
+    """
+    try:
+        if hasattr(st, "experimental_rerun"):
+            return st.experimental_rerun()
+    except Exception:
+        pass
+
+    # Essayer d'importer et lever RerunException selon différentes versions
+    try:
+        # Anciennes versions
+        from streamlit.script_runner import RerunException
+        raise RerunException()
+    except Exception:
+        try:
+            # Nouvelles versions
+            from streamlit.runtime.scriptrunner import RerunException
+            raise RerunException()
+        except Exception:
+            # Dernier recours
+            st.session_state._rerun_needed = True
+            try:
+                st.stop()
+            except Exception:
+                return
+
+
 # ============================================
 #          INTERFACE STREAMLIT
 # ============================================
@@ -276,7 +308,7 @@ def main():
         load_model.clear()
         st.session_state.model = None
         st.session_state.model_path = None
-        st.experimental_rerun()
+        safe_rerun()
 
     # Bouton pour télécharger le modèle actuel (si présent)
     model_download_path = None
@@ -348,12 +380,12 @@ def main():
                 for i, p in enumerate(img_paths):
                     col = cols[i % 4]
                     try:
-                        col.image(str(p), use_column_width=True)
+                        col.image(str(p), use_container_width=True)
                     except Exception:
                         col.write(p.name)
                     if col.button("Tester", key=f"test_sample_{i}"):
                         st.session_state.sample_to_test = str(p)
-                        st.experimental_rerun()
+                        safe_rerun()
             else:
                 st.info("Aucune image valide dans `tested_images`. Ajoutez des .jpg/.png.")
 
