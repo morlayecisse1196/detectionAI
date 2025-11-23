@@ -221,6 +221,15 @@ def cleanup(path):
         pass
 
 
+def read_file_bytes(path):
+    """Renvoie le contenu binaire du fichier si disponible, sinon None."""
+    try:
+        with open(path, "rb") as f:
+            return f.read()
+    except Exception:
+        return None
+
+
 # ============================================
 #          INTERFACE STREAMLIT
 # ============================================
@@ -269,6 +278,26 @@ def main():
         st.session_state.model_path = None
         st.experimental_rerun()
 
+    # Bouton pour télécharger le modèle actuel (si présent)
+    model_download_path = None
+    if st.session_state.model_path:
+        model_download_path = st.session_state.model_path
+    else:
+        if MODEL_LOCAL.exists():
+            model_download_path = str(MODEL_LOCAL)
+
+    if model_download_path and Path(model_download_path).exists():
+        model_bytes = read_file_bytes(model_download_path)
+        if model_bytes is not None:
+            st.sidebar.download_button(
+                "Télécharger le modèle (.pt)",
+                data=model_bytes,
+                file_name=Path(model_download_path).name,
+                mime="application/octet-stream",
+            )
+        else:
+            st.sidebar.info("Impossible de lire le fichier du modèle pour le téléchargement.")
+
     # ------- Load Model --------
     new_path = None
 
@@ -307,10 +336,47 @@ def main():
             key="image_uploader"
         )
 
-        if uploaded_image and model:
+        # Galerie d'images déjà testées par d'autres
+        samples_dir = Path("tested_images")
+        sample_nparray = None
+        if samples_dir.exists() and any(samples_dir.iterdir()):
+            st.markdown("---")
+            st.subheader("📚 Images déjà testées")
+            img_paths = [p for p in samples_dir.iterdir() if p.suffix.lower() in ('.jpg', '.jpeg', '.png')]
+            if img_paths:
+                cols = st.columns(4)
+                for i, p in enumerate(img_paths):
+                    col = cols[i % 4]
+                    try:
+                        col.image(str(p), use_column_width=True)
+                    except Exception:
+                        col.write(p.name)
+                    if col.button("Tester", key=f"test_sample_{i}"):
+                        st.session_state.sample_to_test = str(p)
+                        st.experimental_rerun()
+            else:
+                st.info("Aucune image valide dans `tested_images`. Ajoutez des .jpg/.png.")
+
+        # Si l'utilisateur a choisi une image sample, on la charge
+        if "sample_to_test" in st.session_state and st.session_state.sample_to_test:
+            try:
+                sample_path = st.session_state.sample_to_test
+                sample_img = Image.open(sample_path)
+                uploaded_image = None
+                st.markdown(f"**Image sélectionnée :** {Path(sample_path).name}")
+                st.image(sample_img, use_container_width=True)
+                sample_nparray = np.array(sample_img)
+            except Exception as e:
+                st.error(f"Impossible de charger l'image sample : {e}")
+                sample_nparray = None
+
+        if (uploaded_image or sample_nparray is not None) and model:
             # Utiliser PIL pour charger l'image
-            img = Image.open(uploaded_image)
-            img_array = np.array(img)
+            if uploaded_image:
+                img = Image.open(uploaded_image)
+                img_array = np.array(img)
+            else:
+                img_array = sample_nparray
             
             with st.spinner("Analyse en cours..."):
                 # Passer directement l'array numpy à YOLO
@@ -339,7 +405,7 @@ def main():
             else:
                 st.warning("Aucun résultat. Vérifiez l'image et les paramètres.")
 
-        elif uploaded_image and not model:
+        elif (uploaded_image or ("sample_to_test" in st.session_state and st.session_state.sample_to_test)) and not model:
             st.error("Veuillez charger le modèle d'abord.")
     
     # ============================================
